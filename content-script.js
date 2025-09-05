@@ -16,7 +16,9 @@ const DEFAULT_SETTINGS = {
     { name: 'Narrow', width: 700, enabled: true },
   ],
   preserveComments: true,
-  minContentLength: 100
+  minContentLength: 100,
+  grayoutBackground: true,
+  grayoutAmount: 0.2
 };
 
 let currentSettings = { ...DEFAULT_SETTINGS };
@@ -94,6 +96,138 @@ const EXCLUDE_SELECTORS = [
 ];
 
 // ============================================================================
+// BACKGROUND GRAYOUT MANAGEMENT
+// ============================================================================
+
+const BackgroundGrayout = {
+  originalBackgroundColor: null,
+  isApplied: false,
+
+  init() {
+    // Store the original background color
+    this.originalBackgroundColor = window.getComputedStyle(document.body).backgroundColor;
+    
+    // Apply grayout if enabled
+    if (currentSettings.grayoutBackground) {
+      this.apply();
+    }
+  },
+
+  apply() {
+    if (this.isApplied) return;
+
+    const currentBg = window.getComputedStyle(document.body).backgroundColor;
+    const darkerBg = this.darkenColor(currentBg, currentSettings.grayoutAmount);
+    
+    if (darkerBg) {
+      document.body.style.setProperty('background-color', darkerBg, 'important');
+      this.isApplied = true;
+    }
+  },
+
+  remove() {
+    if (!this.isApplied) return;
+
+    if (this.originalBackgroundColor) {
+      document.body.style.setProperty('background-color', this.originalBackgroundColor, 'important');
+    } else {
+      document.body.style.removeProperty('background-color');
+    }
+    this.isApplied = false;
+  },
+
+  toggle(enabled) {
+    if (enabled) {
+      this.apply();
+    } else {
+      this.remove();
+    }
+  },
+
+  darkenColor(color, amount) {
+    // Handle different color formats
+    if (!color || color === 'transparent' || color === 'inherit') {
+      color = '#ffffff'; // Default to white if no background
+    }
+
+    // Convert to RGB
+    let rgb = this.parseColor(color);
+    if (!rgb) return null;
+
+    // Darken by reducing each component
+    rgb.r = Math.max(0, Math.floor(rgb.r * (1 - amount)));
+    rgb.g = Math.max(0, Math.floor(rgb.g * (1 - amount)));
+    rgb.b = Math.max(0, Math.floor(rgb.b * (1 - amount)));
+
+    return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+  },
+
+  parseColor(color) {
+    // Handle rgb() format
+    const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (rgbMatch) {
+      return {
+        r: parseInt(rgbMatch[1]),
+        g: parseInt(rgbMatch[2]),
+        b: parseInt(rgbMatch[3])
+      };
+    }
+
+    // Handle rgba() format
+    const rgbaMatch = color.match(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*[\d.]+\)/);
+    if (rgbaMatch) {
+      return {
+        r: parseInt(rgbaMatch[1]),
+        g: parseInt(rgbaMatch[2]),
+        b: parseInt(rgbaMatch[3])
+      };
+    }
+
+    // Handle hex format
+    const hexMatch = color.match(/^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+    if (hexMatch) {
+      return {
+        r: parseInt(hexMatch[1], 16),
+        g: parseInt(hexMatch[2], 16),
+        b: parseInt(hexMatch[3], 16)
+      };
+    }
+
+    // Handle 3-digit hex format
+    const hex3Match = color.match(/^#([a-f\d])([a-f\d])([a-f\d])$/i);
+    if (hex3Match) {
+      return {
+        r: parseInt(hex3Match[1] + hex3Match[1], 16),
+        g: parseInt(hex3Match[2] + hex3Match[2], 16),
+        b: parseInt(hex3Match[3] + hex3Match[3], 16)
+      };
+    }
+
+    // Handle named colors (common ones)
+    const namedColors = {
+      'white': { r: 255, g: 255, b: 255 },
+      'black': { r: 0, g: 0, b: 0 },
+      'red': { r: 255, g: 0, b: 0 },
+      'green': { r: 0, g: 128, b: 0 },
+      'blue': { r: 0, g: 0, b: 255 },
+      'yellow': { r: 255, g: 255, b: 0 },
+      'cyan': { r: 0, g: 255, b: 255 },
+      'magenta': { r: 255, g: 0, b: 255 },
+      'gray': { r: 128, g: 128, b: 128 },
+      'grey': { r: 128, g: 128, b: 128 }
+    };
+
+    const namedColor = namedColors[color.toLowerCase()];
+    if (namedColor) {
+      return namedColor;
+    }
+
+    // Default to white if we can't parse
+    return { r: 255, g: 255, b: 255 };
+  }
+};
+
+// ============================================================================
 // SETTINGS MANAGEMENT
 // ============================================================================
 
@@ -103,9 +237,11 @@ const SettingsManager = {
       const stored = await chrome.storage.sync.get(DEFAULT_SETTINGS);
       currentSettings = { ...DEFAULT_SETTINGS, ...stored };
       this.applyCSSSettings();
+      this.applyBackgroundSettings();
     } catch (error) {
       console.warn('Failed to load settings, using defaults:', error);
       currentSettings = { ...DEFAULT_SETTINGS };
+      this.applyBackgroundSettings();
     }
   },
 
@@ -134,9 +270,14 @@ const SettingsManager = {
     }
   },
 
+  applyBackgroundSettings() {
+    BackgroundGrayout.toggle(currentSettings.grayoutBackground);
+  },
+
   updateSettings(newSettings) {
     currentSettings = { ...currentSettings, ...newSettings };
     this.applyCSSSettings();
+    this.applyBackgroundSettings();
   }
 };
 
@@ -416,6 +557,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       modeName: currentMode?.name || 'Off',
       modeWidth: currentMode?.width || null
     });
+  } else if (request.action === 'toggle-grayout-background') {
+    currentSettings.grayoutBackground = !currentSettings.grayoutBackground;
+    BackgroundGrayout.toggle(currentSettings.grayoutBackground);
+    
+    // Save the updated setting
+    chrome.storage.sync.set({ grayoutBackground: currentSettings.grayoutBackground });
+    
+    sendResponse({ 
+      enabled: currentSettings.grayoutBackground,
+      success: true 
+    });
   } else if (request.action === 'settings-updated') {
     SettingsManager.updateSettings(request.settings);
     sendResponse({ success: true });
@@ -425,5 +577,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // Initialize extension
 (async () => {
   await SettingsManager.loadSettings();
+  BackgroundGrayout.init();
   console.log('Reading Escape Mode extension loaded with settings:', currentSettings);
 })();

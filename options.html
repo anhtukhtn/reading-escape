@@ -250,6 +250,34 @@
             <input type="number" id="minContentLength" min="50" max="500" value="100">
         </div>
         
+        <div class="setting-group">
+            <label class="setting-label">Background Grayout</label>
+            <div class="setting-description">
+                Automatically darken page backgrounds for better reading comfort
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <label class="setting-label" for="grayoutBackground" style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer;">
+                    <input type="checkbox" id="grayoutBackground" style="margin: 0;">
+                    Enable background grayout
+                </label>
+            </div>
+            
+            <div id="grayoutSettings" style="margin-left: 24px;">
+                <label class="setting-label" for="grayoutAmount">Darkening Amount</label>
+                <div class="setting-description" style="margin-bottom: 12px;">
+                    How much to darken the background (higher = darker)
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <input type="range" id="grayoutAmount" min="5" max="50" value="20" style="flex: 1; max-width: 200px;">
+                    <span id="grayoutPercentage" style="font-weight: 500; color: #1a73e8;">20%</span>
+                </div>
+                <div style="margin-top: 8px; font-size: 12px; color: #5f6368;">
+                    Preview: <span id="grayoutPreview" style="padding: 4px 8px; border-radius: 3px; background: rgb(204, 204, 204);">Sample darkened background</span>
+                </div>
+            </div>
+        </div>
+        
         <button class="save-button" id="saveButton">Save Settings</button>
         <div class="status-message" id="statusMessage"></div>
     </div>

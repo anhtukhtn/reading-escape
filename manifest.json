@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Reading Escape Mode",
-  "version": "1.0",
+  "version": "0.1.1",
   "description": "Toggle reading-escape mode with hotkeys for distraction-free reading",
   "permissions": [
     "activeTab",

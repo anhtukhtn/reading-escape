@@ -4,11 +4,12 @@
 
 const DEFAULT_SETTINGS = {
   readingModes: [
-    { name: 'Narrow', width: 400, enabled: true },
-    { name: 'Wide', width: 800, enabled: true }
+    { name: 'Wide', width: 700, enabled: true }
   ],
   preserveComments: true,
-  minContentLength: 100
+  minContentLength: 100,
+  grayoutBackground: true,
+  grayoutAmount: 0.2
 };
 
 const OptionsManager = {
@@ -27,6 +28,11 @@ const OptionsManager = {
       addModeButton: document.getElementById('addModeButton'),
       preserveComments: document.getElementById('preserveComments'),
       minContentLength: document.getElementById('minContentLength'),
+      grayoutBackground: document.getElementById('grayoutBackground'),
+      grayoutAmount: document.getElementById('grayoutAmount'),
+      grayoutPercentage: document.getElementById('grayoutPercentage'),
+      grayoutPreview: document.getElementById('grayoutPreview'),
+      grayoutSettings: document.getElementById('grayoutSettings'),
       saveButton: document.getElementById('saveButton'),
       statusMessage: document.getElementById('statusMessage')
     };
@@ -35,6 +41,15 @@ const OptionsManager = {
   bindEvents() {
     this.elements.saveButton.addEventListener('click', () => this.saveSettings());
     this.elements.addModeButton.addEventListener('click', () => this.addNewMode());
+    
+    // Grayout background events
+    this.elements.grayoutBackground.addEventListener('change', () => {
+      this.updateGrayoutUI();
+    });
+    
+    this.elements.grayoutAmount.addEventListener('input', () => {
+      this.updateGrayoutPreview();
+    });
   },
 
   async loadSettings() {
@@ -44,9 +59,13 @@ const OptionsManager = {
       
       this.elements.preserveComments.value = stored.preserveComments.toString();
       this.elements.minContentLength.value = stored.minContentLength;
+      this.elements.grayoutBackground.checked = stored.grayoutBackground;
+      this.elements.grayoutAmount.value = Math.round((stored.grayoutAmount || 0.2) * 100);
       
       this.renderModes();
       this.updatePreview();
+      this.updateGrayoutUI();
+      this.updateGrayoutPreview();
     } catch (error) {
       this.showStatus('Error loading settings', 'error');
     }
@@ -159,6 +178,25 @@ const OptionsManager = {
     this.elements.modesContainer.parentNode.appendChild(preview);
   },
 
+  updateGrayoutUI() {
+    const isEnabled = this.elements.grayoutBackground.checked;
+    this.elements.grayoutSettings.style.opacity = isEnabled ? '1' : '0.5';
+    this.elements.grayoutAmount.disabled = !isEnabled;
+  },
+
+  updateGrayoutPreview() {
+    const amount = parseInt(this.elements.grayoutAmount.value);
+    this.elements.grayoutPercentage.textContent = `${amount}%`;
+    
+    // Calculate darkened white color for preview
+    const factor = 1 - (amount / 100);
+    const grayValue = Math.round(255 * factor);
+    const previewColor = `rgb(${grayValue}, ${grayValue}, ${grayValue})`;
+    
+    this.elements.grayoutPreview.style.backgroundColor = previewColor;
+    this.elements.grayoutPreview.style.color = grayValue < 128 ? 'white' : 'black';
+  },
+
   validateSettings() {
     const enabledModes = this.currentModes.filter(mode => mode.enabled);
     
@@ -192,7 +230,9 @@ const OptionsManager = {
     const settings = {
       readingModes: this.currentModes,
       preserveComments: this.elements.preserveComments.value === 'true',
-      minContentLength: parseInt(this.elements.minContentLength.value)
+      minContentLength: parseInt(this.elements.minContentLength.value),
+      grayoutBackground: this.elements.grayoutBackground.checked,
+      grayoutAmount: parseInt(this.elements.grayoutAmount.value) / 100
     };
 
     try {
