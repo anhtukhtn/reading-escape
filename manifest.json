@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Reading Escape Mode",
+  "version": "1.0",
+  "description": "Toggle reading-escape mode with hotkeys for distraction-free reading",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "options_page": "options.html",
+  "commands": {
+    "toggle-reading-mode": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E",
+        "mac": "Command+Shift+E"
+      },
+      "description": "Toggle reading-escape mode"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-script.js"],
+      "css": ["reading-escape.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

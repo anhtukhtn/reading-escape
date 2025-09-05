@@ -1,147 +1,62 @@
-# Reading Escape Mode - Chrome Extension
+# Reading Escape Mode
 
-A minimalist Chrome extension that transforms any webpage into a distraction-free reading experience by filtering out ads, sidebars, navigation elements, and other visual clutter.
+A Chrome extension that creates distraction-free reading by filtering out ads, sidebars, and clutter. Configure unlimited custom reading modes with personalized widths.
 
 ## 🚀 Features
 
-- **One-Click Activation**: Toggle reading mode with a simple keyboard shortcut or browser action
-- **Three Reading States**: 
-  - **Off**: Normal webpage view
-  - **Narrow**: 400px focused reading column
-  - **Wide**: 800px expanded reading view
-- **Smart Content Detection**: Automatically finds and preserves main article content
-- **Comprehensive Filtering**: Removes ads, sidebars, social buttons, newsletters, popups, and other distractions
-- **Comment Preservation**: Keeps relevant comment sections when available
-- **Universal Compatibility**: Works on most news sites, blogs, and article pages
-
-## 📖 How It Works
-
-Reading Escape Mode intelligently analyzes webpage structure to:
-
-1. **Identify Main Content**: Uses smart selectors to find article text
-2. **Filter Distractions**: Removes 100+ types of unwanted elements
-3. **Preserve Context**: Keeps relevant comments and discussions
-4. **Create Clean Layout**: Presents content in a readable, distraction-free format
+- **Configurable Modes**: Create unlimited reading modes (e.g., Compact 350px, Wide 800px, Ultra-Wide 1200px)
+- **One-Click Toggle**: `Ctrl+Shift+E` cycles through your modes
+- **Smart Filtering**: Removes ads, social buttons, popups, and 100+ distraction types
+- **Comment Control**: Include or exclude comment sections
+- **Universal**: Works on news sites, blogs, documentation, and forums
 
 ## 🎯 Installation
 
-### From Chrome Web Store
-1. Visit the [Chrome Web Store](#) (link pending publication)
-2. Click "Add to Chrome"
-3. Confirm installation
+**Chrome Web Store**: [Coming Soon](#)
 
-### Manual Installation (Development)
-1. Download or clone this repository
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" in the top right
-4. Click "Load unpacked" and select the extension folder
+**Manual Install**:
+1. Download this repository
+2. Go to `chrome://extensions/` → Enable "Developer mode"
+3. Click "Load unpacked" → Select extension folder
 
 ## ⌨️ Usage
 
-### Keyboard Shortcut
-- **Default**: `Alt+R` (Windows/Linux) or `Option+R` (Mac)
-- Cycles through: Off → Narrow → Wide → Off
+- **Toggle**: `Ctrl+Shift+E` or click extension icon
+- **Configure**: Right-click extension → "Options"
+- **Cycling**: Off → Mode 1 → Mode 2 → Off
 
-### Browser Action
-- Click the Reading Escape Mode icon in the toolbar
-- Same cycling behavior as keyboard shortcut
+## ⚙️ Configuration
 
-### Customization
-- Right-click the extension icon → Options to modify keyboard shortcuts
-- Go to `chrome://extensions/shortcuts` for detailed shortcut management
+**Reading Modes**:
+- Add unlimited modes with custom widths (200px-1600px)
+- Enable/disable modes without deleting
+- Live preview of cycling order
+
+**Content Settings**:
+- Include/exclude comments
+- Adjust content detection threshold
 
 ## 🛠️ Technical Details
 
-### Supported Content Types
-- News articles
-- Blog posts
-- Documentation
-- Medium articles
-- Wikipedia pages
-- Academic papers
-- Forum discussions (Reddit, Hacker News, etc.)
+**Compatibility**: Chrome 88+, Edge, Brave, Opera
 
-### Filtered Elements
-The extension removes:
-- **Advertisements**: Google Ads, banner ads, sponsored content
-- **Navigation**: Headers, footers, breadcrumbs, menus
-- **Social Elements**: Share buttons, follow widgets, social media embeds
-- **Distractions**: Sidebars, related articles, trending sections
-- **Interruptions**: Popups, modals, newsletter signups
-- **Legal Notices**: Cookie banners, GDPR notices
-- **Media**: Auto-play videos, audio players (when not part of main content)
+**Filtered Elements**: Ads, navigation, social buttons, popups, sidebars, related content, cookie banners
 
-### Browser Compatibility
-- Chrome 88+
-- Chromium-based browsers (Edge, Brave, Opera)
-
-## 🔒 Privacy & Security
-
-- **No Data Collection**: Extension doesn't collect, store, or transmit any personal data
-- **Local Processing**: All content filtering happens locally in your browser
-- **No External Requests**: No communication with external servers
-- **Minimal Permissions**: Only requires access to webpage content for filtering
+**Privacy**: No data collection, local processing only, minimal permissions
 
 ## 🐛 Troubleshooting
 
-### Reading Mode Not Working?
-1. **Refresh the page** and try again
-2. **Check content type**: Works best on article-based pages
-3. **Try different websites**: Some sites may have unusual layouts
+- **Not working?** Refresh page, check enabled modes in settings
+- **Missing content?** Try different mode widths, adjust content threshold
+- **Shortcut conflicts?** Go to `chrome://extensions/shortcuts`
 
-### Content Missing?
-1. **Cycle through modes**: Try narrow → wide to see more content
-2. **Check original page**: Some sites may have minimal content
-3. **Report issues**: Help us improve by reporting problematic sites
+## 📝 Version 2.0.0
 
-### Keyboard Shortcut Conflicts?
-1. Go to `chrome://extensions/shortcuts`
-2. Find "Reading Escape Mode"
-3. Set a custom shortcut
-
-## 📝 Release Notes
-
-### Version 1.0.0
-- Initial release
-- Smart content detection
-- Three reading modes
-- Comprehensive ad and distraction filtering
-- Comment section preservation
-
-## 🤝 Contributing
-
-We welcome contributions! To contribute:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-### Development Setup
-```bash
-git clone https://github.com/yourusername/reading-escape-mode
-cd reading-escape-mode
-# Load unpacked extension in Chrome for testing
-```
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-- **Issues**: Report bugs on [GitHub Issues](#)
-- **Feature Requests**: Suggest improvements via GitHub
-- **Contact**: [your-email@example.com]
-
-## 🙏 Acknowledgments
-
-- Inspired by browser reading modes and reader view extensions
-- Built with focus on reducing cognitive load and improving reading experience
-- Thanks to all users providing feedback and suggestions
+- Configurable multiple modes with custom widths
+- Enhanced options page with live preview
+- Improved architecture (no switch-case logic)
+- Flexible comment and content settings
 
 ---
 
 **Enjoy distraction-free reading!** 📚✨
-# reading-escape
