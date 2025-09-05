@@ -214,6 +214,50 @@
             font-size: 14px;
             color: #5f6368;
         }
+        
+        .selector-editor {
+            width: 100%;
+            min-height: 100px;
+            padding: 12px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 13px;
+            resize: vertical;
+            background: #f8f9fa;
+            line-height: 1.4;
+        }
+        
+        .selector-editor:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+            background: white;
+        }
+        
+        .selector-help {
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: #e8f0fe;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #1967d2;
+        }
+        
+        .reset-button {
+            background: #ea4335;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        
+        .reset-button:hover {
+            background: #d33b2c;
+        }
     </style>
 </head>
 <body>
@@ -275,6 +319,49 @@
                 <div style="margin-top: 8px; font-size: 12px; color: #5f6368;">
                     Preview: <span id="grayoutPreview" style="padding: 4px 8px; border-radius: 3px; background: rgb(204, 204, 204);">Sample darkened background</span>
                 </div>
+            </div>
+        </div>
+        
+        <div class="setting-group">
+            <label class="setting-label">CSS Selector Configuration</label>
+            <div class="setting-description">
+                Customize CSS selectors for content detection. Advanced users only.
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label class="setting-label" for="contentSelectors">Content Selectors</label>
+                <div class="setting-description">
+                    CSS selectors to find main article content (one per line)
+                </div>
+                <textarea id="contentSelectors" class="selector-editor" placeholder="article&#10;.article-content&#10;[role=&quot;main&quot;]&#10;main"></textarea>
+                <div class="selector-help">
+                    <strong>Examples:</strong> article, .article-content, #main-content, [role="main"]
+                </div>
+                <button type="button" class="reset-button" id="resetContentSelectors">Reset to Default</button>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label class="setting-label" for="commentSelectors">Comment Selectors</label>
+                <div class="setting-description">
+                    CSS selectors to find comment sections (one per line)
+                </div>
+                <textarea id="commentSelectors" class="selector-editor" placeholder=".comments&#10;.comment-section&#10;#comments"></textarea>
+                <div class="selector-help">
+                    <strong>Examples:</strong> .comments, #comments, .comment-section, .disqus-thread
+                </div>
+                <button type="button" class="reset-button" id="resetCommentSelectors">Reset to Default</button>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label class="setting-label" for="excludeSelectors">Exclude Selectors</label>
+                <div class="setting-description">
+                    CSS selectors for elements to remove from content (one per line)
+                </div>
+                <textarea id="excludeSelectors" class="selector-editor" placeholder="nav&#10;header&#10;footer&#10;.advertisement"></textarea>
+                <div class="selector-help">
+                    <strong>Examples:</strong> nav, header, footer, .ads, .sidebar, script, style
+                </div>
+                <button type="button" class="reset-button" id="resetExcludeSelectors">Reset to Default</button>
             </div>
         </div>
         

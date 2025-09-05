@@ -10,6 +10,32 @@ const CSS_CLASSES = {
   wide: 'reading-escape-wide'
 };
 
+// Default selector arrays
+const DEFAULT_CONTENT_SELECTORS = [
+  '.article-content', 'article', '[role="main"]', 'main', '.content',
+  '.post-content', '.entry-content', '.story-body', '.text-content',
+  '#content', '.article-body', '.post-body', '.main-content',
+  '.article-wrapper', '.content-wrapper', '#hnmain',
+  '.page-content', '.page-content.spacer-md', '.page-content__content'
+];
+
+const DEFAULT_COMMENT_SELECTORS = [
+  '.comments', '.comment-section', '.comments-section', '#comments',
+  '.disqus-thread', '.fb-comments', '.comment-list', '.comments-area',
+  '.comment-wrapper', '.discussion', '.comment-container', '#bigbox',
+  '.comments__wrapper', '.comments__container'
+];
+
+const DEFAULT_EXCLUDE_SELECTORS = [
+  // Advertisement elements
+  '.advertisement', '.ads', '.ad', '.sponsored', '.promo', '.banner-ad', '.ad-banner',
+  '.google-ads', '.adsense', '.ad-container', '.ad-wrapper', '.ad-space', '.ad-block',
+  '[class*="ad-"]', '[class*="ads"]', '[id*="ad-"]', '[id*="ads"]',
+  '[class*="sponsored"]', '[id*="sponsored"]', '[class*="promo"]', '[id*="promo"]',
+  '[data-ad]', '[data-ads]', '[data-google-ad]', 'ins.adsbygoogle',
+  '.adnxs', '.doubleclick', '.googlesyndication', '.amazon-ads'
+];
+
 // Default settings (will be overridden by user preferences)
 const DEFAULT_SETTINGS = {
   readingModes: [
@@ -18,82 +44,22 @@ const DEFAULT_SETTINGS = {
   preserveComments: true,
   minContentLength: 100,
   grayoutBackground: true,
-  grayoutAmount: 0.2
+  grayoutAmount: 0.2,
+  contentSelectors: DEFAULT_CONTENT_SELECTORS,
+  commentSelectors: DEFAULT_COMMENT_SELECTORS,
+  excludeSelectors: DEFAULT_EXCLUDE_SELECTORS
 };
 
 let currentSettings = { ...DEFAULT_SETTINGS };
 
 // ============================================================================
-// SELECTOR CONFIGURATIONS
+// SELECTOR ACCESS HELPERS
 // ============================================================================
 
-const CONTENT_SELECTORS = [
-  '.article-content', 'article', '[role="main"]', 'main', '.content',
-  '.post-content', '.entry-content', '.story-body', '.text-content',
-  '#content', '.article-body', '.post-body', '.main-content',
-  '.article-wrapper', '.content-wrapper', '#hnmain'
-];
-
-const COMMENT_SELECTORS = [
-  '.comments', '.comment-section', '.comments-section', '#comments',
-  '.disqus-thread', '.fb-comments', '.comment-list', '.comments-area',
-  '.comment-wrapper', '.discussion', '.comment-container', '#bigbox'
-];
-
-const EXCLUDE_SELECTORS = [
-  // Navigation
-  'nav', 'header', 'footer', '[role="navigation"]', '[role="banner"]', '[role="contentinfo"]',
-  
-  // Sidebars
-  '.sidebar', '.aside', 'aside', '[class*="sidebar"]', '[id*="sidebar"]', 
-  '[class*="aside"]', '[id*="aside"]',
-  
-  // Advertisements
-  '.advertisement', '.ads', '.ad', '.sponsored', '.promo', '.banner-ad', '.ad-banner',
-  '.google-ads', '.adsense', '[class*="ad-"]', '[class*="ads"]', '[id*="ad-"]', 
-  '[id*="ads"]', '[class*="sponsored"]', '[id*="sponsored"]', '[class*="promo"]', 
-  '[id*="promo"]', '[data-ad]', '[data-ads]', 'ins.adsbygoogle',
-  
-  // Social sharing
-  '.social-share', '.share-buttons', '.social-buttons', '.share-bar', '.social-media',
-  '.social-links', '[class*="share"]', '[id*="share"]', '[class*="social"]', 
-  '[id*="social"]', '[class*="follow"]', '[id*="follow"]',
-  
-  // Newsletter
-  '.newsletter', '.newsletter-signup', '.subscribe', '.subscription', '.email-signup',
-  '[class*="newsletter"]', '[id*="newsletter"]', '[class*="subscribe"]', '[id*="subscribe"]',
-  '[class*="signup"]', '[id*="signup"]',
-  
-  // Popups
-  '.popup', '.modal', '.overlay', '.lightbox', '.dialog', '.tooltip',
-  '[class*="popup"]', '[id*="popup"]', '[class*="modal"]', '[id*="modal"]',
-  '[class*="overlay"]', '[id*="overlay"]', '[role="dialog"]',
-  
-  // Cookie banners
-  '.cookie-banner', '.cookie-notice', '.consent-banner', '.gdpr-banner',
-  '[class*="cookie"]', '[id*="cookie"]', '[class*="consent"]', '[id*="consent"]',
-  '[class*="gdpr"]', '[id*="gdpr"]',
-  
-  // Related content
-  '.related-posts', '.recommended', '.related-articles', '.more-stories',
-  '.trending', '.popular', '[class*="related"]', '[id*="related"]',
-  '[class*="recommended"]', '[id*="recommended"]', '[class*="trending"]', '[id*="trending"]',
-  
-  // Navigation elements
-  '.breadcrumb', '.breadcrumbs', '.pagination', '.pager', '.nav-menu', '.menu',
-  '[class*="nav"]', '[id*="nav"]', '[class*="menu"]', '[id*="menu"]',
-  '[class*="breadcrumb"]', '[id*="breadcrumb"]',
-  
-  // Widgets
-  '.widget', '.plugin', '.embed', '.iframe-wrapper', '.video-player', '.audio-player',
-  '[class*="widget"]', '[id*="widget"]', '[class*="plugin"]', '[id*="plugin"]',
-  
-  // Fixed elements
-  '.fixed', '.sticky', '[class*="fixed"]', '[id*="fixed"]', '[class*="sticky"]', '[id*="sticky"]',
-  
-  // Scripts
-  'script', 'style', 'noscript', 'link[rel="stylesheet"]'
-];
+// Dynamic selector access - uses current settings
+const getContentSelectors = () => currentSettings.contentSelectors || DEFAULT_CONTENT_SELECTORS;
+const getCommentSelectors = () => currentSettings.commentSelectors || DEFAULT_COMMENT_SELECTORS;
+const getExcludeSelectors = () => currentSettings.excludeSelectors || DEFAULT_EXCLUDE_SELECTORS;
 
 // ============================================================================
 // BACKGROUND GRAYOUT MANAGEMENT
@@ -335,7 +301,7 @@ const ReadingState = {
 
 const ContentFilter = {
   shouldExclude(element) {
-    return EXCLUDE_SELECTORS.some(selector => {
+    return getExcludeSelectors().some(selector => {
       try {
         return element.matches(selector);
       } catch (e) {
@@ -345,7 +311,7 @@ const ContentFilter = {
   },
 
   removeUnwantedElements(container) {
-    EXCLUDE_SELECTORS.forEach(selector => {
+    getExcludeSelectors().forEach(selector => {
       try {
         const unwantedElements = container.querySelectorAll(selector);
         unwantedElements.forEach(element => element.remove());
@@ -375,7 +341,7 @@ const ContentFilter = {
 
 const ContentDiscovery = {
   findMainContent() {
-    for (const selector of CONTENT_SELECTORS) {
+    for (const selector of getContentSelectors()) {
       const elements = document.querySelectorAll(selector);
       if (elements.length === 0) continue;
 
@@ -388,7 +354,7 @@ const ContentDiscovery = {
   findCommentSection() {
     if (!currentSettings.preserveComments) return null;
     
-    for (const selector of COMMENT_SELECTORS) {
+    for (const selector of getCommentSelectors()) {
       const elements = document.querySelectorAll(selector);
       if (elements.length > 0) {
         return elements[0].parentElement.parentElement;

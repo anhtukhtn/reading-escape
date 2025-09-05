@@ -2,6 +2,32 @@
 // READING ESCAPE MODE - Options Page for Multiple Modes
 // ============================================================================
 
+// Default selector arrays
+const DEFAULT_CONTENT_SELECTORS = [
+  '.article-content', 'article', '[role="main"]', 'main', '.content',
+  '.post-content', '.entry-content', '.story-body', '.text-content',
+  '#content', '.article-body', '.post-body', '.main-content',
+  '.article-wrapper', '.content-wrapper', '#hnmain',
+  '.page-content', '.page-content.spacer-md', '.page-content__content'
+];
+
+const DEFAULT_COMMENT_SELECTORS = [
+  '.comments', '.comment-section', '.comments-section', '#comments',
+  '.disqus-thread', '.fb-comments', '.comment-list', '.comments-area',
+  '.comment-wrapper', '.discussion', '.comment-container', '#bigbox',
+  '.comments__wrapper', '.comments__container'
+];
+
+const DEFAULT_EXCLUDE_SELECTORS = [
+  // Advertisement elements
+  '.advertisement', '.ads', '.ad', '.sponsored', '.promo', '.banner-ad', '.ad-banner',
+  '.google-ads', '.adsense', '.ad-container', '.ad-wrapper', '.ad-space', '.ad-block',
+  '[class*="ad-"]', '[class*="ads"]', '[id*="ad-"]', '[id*="ads"]',
+  '[class*="sponsored"]', '[id*="sponsored"]', '[class*="promo"]', '[id*="promo"]',
+  '[data-ad]', '[data-ads]', '[data-google-ad]', 'ins.adsbygoogle',
+  '.adnxs', '.doubleclick', '.googlesyndication', '.amazon-ads'
+];
+
 const DEFAULT_SETTINGS = {
   readingModes: [
     { name: 'Wide', width: 700, enabled: true }
@@ -9,7 +35,10 @@ const DEFAULT_SETTINGS = {
   preserveComments: true,
   minContentLength: 100,
   grayoutBackground: true,
-  grayoutAmount: 0.2
+  grayoutAmount: 0.2,
+  contentSelectors: DEFAULT_CONTENT_SELECTORS,
+  commentSelectors: DEFAULT_COMMENT_SELECTORS,
+  excludeSelectors: DEFAULT_EXCLUDE_SELECTORS
 };
 
 const OptionsManager = {
@@ -33,6 +62,12 @@ const OptionsManager = {
       grayoutPercentage: document.getElementById('grayoutPercentage'),
       grayoutPreview: document.getElementById('grayoutPreview'),
       grayoutSettings: document.getElementById('grayoutSettings'),
+      contentSelectors: document.getElementById('contentSelectors'),
+      commentSelectors: document.getElementById('commentSelectors'),
+      excludeSelectors: document.getElementById('excludeSelectors'),
+      resetContentSelectors: document.getElementById('resetContentSelectors'),
+      resetCommentSelectors: document.getElementById('resetCommentSelectors'),
+      resetExcludeSelectors: document.getElementById('resetExcludeSelectors'),
       saveButton: document.getElementById('saveButton'),
       statusMessage: document.getElementById('statusMessage')
     };
@@ -50,6 +85,19 @@ const OptionsManager = {
     this.elements.grayoutAmount.addEventListener('input', () => {
       this.updateGrayoutPreview();
     });
+    
+    // Selector reset button events
+    this.elements.resetContentSelectors.addEventListener('click', () => {
+      this.resetSelectors('content');
+    });
+    
+    this.elements.resetCommentSelectors.addEventListener('click', () => {
+      this.resetSelectors('comment');
+    });
+    
+    this.elements.resetExcludeSelectors.addEventListener('click', () => {
+      this.resetSelectors('exclude');
+    });
   },
 
   async loadSettings() {
@@ -61,6 +109,11 @@ const OptionsManager = {
       this.elements.minContentLength.value = stored.minContentLength;
       this.elements.grayoutBackground.checked = stored.grayoutBackground;
       this.elements.grayoutAmount.value = Math.round((stored.grayoutAmount || 0.2) * 100);
+      
+      // Load selector settings
+      this.elements.contentSelectors.value = (stored.contentSelectors || DEFAULT_CONTENT_SELECTORS).join('\n');
+      this.elements.commentSelectors.value = (stored.commentSelectors || DEFAULT_COMMENT_SELECTORS).join('\n');
+      this.elements.excludeSelectors.value = (stored.excludeSelectors || DEFAULT_EXCLUDE_SELECTORS).join('\n');
       
       this.renderModes();
       this.updatePreview();
@@ -197,6 +250,54 @@ const OptionsManager = {
     this.elements.grayoutPreview.style.color = grayValue < 128 ? 'white' : 'black';
   },
 
+  resetSelectors(type) {
+    switch (type) {
+      case 'content':
+        this.elements.contentSelectors.value = DEFAULT_CONTENT_SELECTORS.join('\n');
+        break;
+      case 'comment':
+        this.elements.commentSelectors.value = DEFAULT_COMMENT_SELECTORS.join('\n');
+        break;
+      case 'exclude':
+        this.elements.excludeSelectors.value = DEFAULT_EXCLUDE_SELECTORS.join('\n');
+        break;
+    }
+    this.showStatus(`${type.charAt(0).toUpperCase() + type.slice(1)} selectors reset to default`, 'success');
+  },
+
+  parseSelectorList(text) {
+    return text
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+  },
+
+  validateSelectors() {
+    const contentSelectors = this.parseSelectorList(this.elements.contentSelectors.value);
+    const commentSelectors = this.parseSelectorList(this.elements.commentSelectors.value);
+    const excludeSelectors = this.parseSelectorList(this.elements.excludeSelectors.value);
+
+    if (contentSelectors.length === 0) {
+      this.showStatus('Content selectors cannot be empty', 'error');
+      return false;
+    }
+
+    // Test if selectors are valid CSS
+    const testElement = document.createElement('div');
+    const allSelectors = [...contentSelectors, ...commentSelectors, ...excludeSelectors];
+    
+    for (const selector of allSelectors) {
+      try {
+        testElement.querySelector(selector);
+      } catch (error) {
+        this.showStatus(`Invalid CSS selector: "${selector}"`, 'error');
+        return false;
+      }
+    }
+
+    return true;
+  },
+
   validateSettings() {
     const enabledModes = this.currentModes.filter(mode => mode.enabled);
     
@@ -221,6 +322,11 @@ const OptionsManager = {
       }
     }
 
+    // Validate selectors
+    if (!this.validateSelectors()) {
+      return false;
+    }
+
     return true;
   },
 
@@ -232,7 +338,10 @@ const OptionsManager = {
       preserveComments: this.elements.preserveComments.value === 'true',
       minContentLength: parseInt(this.elements.minContentLength.value),
       grayoutBackground: this.elements.grayoutBackground.checked,
-      grayoutAmount: parseInt(this.elements.grayoutAmount.value) / 100
+      grayoutAmount: parseInt(this.elements.grayoutAmount.value) / 100,
+      contentSelectors: this.parseSelectorList(this.elements.contentSelectors.value),
+      commentSelectors: this.parseSelectorList(this.elements.commentSelectors.value),
+      excludeSelectors: this.parseSelectorList(this.elements.excludeSelectors.value)
     };
 
     try {
