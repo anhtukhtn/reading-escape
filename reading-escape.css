@@ -36,7 +36,7 @@ body.reading-escape-mode-active {
 .reading-escape-content {
   width: var(--reading-escape-narrow-width) !important;
   max-width: var(--reading-escape-narrow-width) !important;
-  background-color: #ffffff !important;
+  background-color: #ddd !important;
   color: #333333 !important;
   padding: 30px !important;
   border-radius: 8px !important;

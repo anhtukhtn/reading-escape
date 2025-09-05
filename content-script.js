@@ -53,13 +53,43 @@ const DEFAULT_SETTINGS = {
 let currentSettings = { ...DEFAULT_SETTINGS };
 
 // ============================================================================
-// SELECTOR ACCESS HELPERS
+// SELECTOR ACCESS HELPERS WITH CACHING
 // ============================================================================
 
-// Dynamic selector access - uses current settings
-const getContentSelectors = () => currentSettings.contentSelectors || DEFAULT_CONTENT_SELECTORS;
-const getCommentSelectors = () => currentSettings.commentSelectors || DEFAULT_COMMENT_SELECTORS;
-const getExcludeSelectors = () => currentSettings.excludeSelectors || DEFAULT_EXCLUDE_SELECTORS;
+// Cached selector access for performance
+const SelectorCache = {
+  contentSelectors: null,
+  commentSelectors: null,
+  excludeSelectors: null,
+  
+  invalidate() {
+    this.contentSelectors = null;
+    this.commentSelectors = null;
+    this.excludeSelectors = null;
+  }
+};
+
+// Optimized selector access with caching
+const getContentSelectors = () => {
+  if (!SelectorCache.contentSelectors) {
+    SelectorCache.contentSelectors = currentSettings.contentSelectors || DEFAULT_CONTENT_SELECTORS;
+  }
+  return SelectorCache.contentSelectors;
+};
+
+const getCommentSelectors = () => {
+  if (!SelectorCache.commentSelectors) {
+    SelectorCache.commentSelectors = currentSettings.commentSelectors || DEFAULT_COMMENT_SELECTORS;
+  }
+  return SelectorCache.commentSelectors;
+};
+
+const getExcludeSelectors = () => {
+  if (!SelectorCache.excludeSelectors) {
+    SelectorCache.excludeSelectors = currentSettings.excludeSelectors || DEFAULT_EXCLUDE_SELECTORS;
+  }
+  return SelectorCache.excludeSelectors;
+};
 
 // ============================================================================
 // BACKGROUND GRAYOUT MANAGEMENT
@@ -242,6 +272,7 @@ const SettingsManager = {
 
   updateSettings(newSettings) {
     currentSettings = { ...currentSettings, ...newSettings };
+    SelectorCache.invalidate(); // Clear selector cache when settings change
     this.applyCSSSettings();
     this.applyBackgroundSettings();
   }
@@ -300,6 +331,10 @@ const ReadingState = {
 // ============================================================================
 
 const ContentFilter = {
+  // Cache for performance
+  _excludeRegexCache: new Map(),
+  _textLengthCache: new WeakMap(),
+
   shouldExclude(element) {
     return getExcludeSelectors().some(selector => {
       try {
@@ -311,27 +346,71 @@ const ContentFilter = {
   },
 
   removeUnwantedElements(container) {
+    // Batch DOM operations for better performance
+    const elementsToRemove = [];
+    
     getExcludeSelectors().forEach(selector => {
       try {
         const unwantedElements = container.querySelectorAll(selector);
-        unwantedElements.forEach(element => element.remove());
+        elementsToRemove.push(...unwantedElements);
       } catch (e) {
         console.warn(`Invalid selector: ${selector}`);
       }
     });
+    
+    // Remove all elements in one batch
+    elementsToRemove.forEach(element => element.remove());
+  },
+
+  // Optimized text length calculation without full cloning
+  getTextLengthFast(element) {
+    // Use cache if available
+    if (this._textLengthCache.has(element)) {
+      return this._textLengthCache.get(element);
+    }
+
+    let textLength = 0;
+    const walker = document.createTreeWalker(
+      element,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: (node) => {
+          // Skip excluded elements efficiently
+          let parent = node.parentElement;
+          while (parent && parent !== element) {
+            if (this.shouldExclude(parent)) {
+              return NodeFilter.FILTER_REJECT;
+            }
+            parent = parent.parentElement;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      }
+    );
+
+    let node;
+    while (node = walker.nextNode()) {
+      textLength += node.textContent.trim().length;
+    }
+
+    // Cache the result
+    this._textLengthCache.set(element, textLength);
+    return textLength;
   },
 
   hasValidContent(element) {
-    const clone = element.cloneNode(true);
-    this.removeUnwantedElements(clone);
-    const textContent = clone.textContent.trim();
-    return textContent.length > currentSettings.minContentLength;
+    return this.getTextLengthFast(element) > currentSettings.minContentLength;
   },
 
   getValidTextLength(element) {
+    return this.getTextLengthFast(element);
+  },
+
+  // Optimized content preparation with minimal cloning
+  prepareCleanContent(element) {
     const clone = element.cloneNode(true);
     this.removeUnwantedElements(clone);
-    return clone.textContent.trim().length;
+    return clone;
   }
 };
 
@@ -340,26 +419,83 @@ const ContentFilter = {
 // ============================================================================
 
 const ContentDiscovery = {
-  findMainContent() {
-    for (const selector of getContentSelectors()) {
-      const elements = document.querySelectorAll(selector);
-      if (elements.length === 0) continue;
+  // Cache for discovered content
+  _contentCache: new Map(),
+  _lastCacheTime: 0,
+  _cacheTimeout: 5000, // 5 second cache
 
-      const validElement = this._findBestValidElement(elements);
-      if (validElement) return validElement;
+  _isCacheValid() {
+    return Date.now() - this._lastCacheTime < this._cacheTimeout;
+  },
+
+  _getCachedContent(key) {
+    if (this._isCacheValid() && this._contentCache.has(key)) {
+      return this._contentCache.get(key);
     }
+    return null;
+  },
+
+  _setCachedContent(key, value) {
+    if (!this._isCacheValid()) {
+      this._contentCache.clear();
+      this._lastCacheTime = Date.now();
+    }
+    this._contentCache.set(key, value);
+  },
+
+  findMainContent() {
+    const cached = this._getCachedContent('mainContent');
+    if (cached !== null) return cached;
+
+    // Use optimized selector strategy - try most specific first
+    const selectors = getContentSelectors();
+    const prioritySelectors = ['article', '[role="main"]', 'main']; // Most likely to contain main content
+    const orderedSelectors = [
+      ...prioritySelectors.filter(s => selectors.includes(s)),
+      ...selectors.filter(s => !prioritySelectors.includes(s))
+    ];
+
+    for (const selector of orderedSelectors) {
+      try {
+        const elements = document.querySelectorAll(selector);
+        if (elements.length === 0) continue;
+
+        const validElement = this._findBestValidElement(elements);
+        if (validElement) {
+          this._setCachedContent('mainContent', validElement);
+          return validElement;
+        }
+      } catch (e) {
+        console.warn(`Invalid selector: ${selector}`, e);
+        continue;
+      }
+    }
+
+    this._setCachedContent('mainContent', null);
     return null;
   },
 
   findCommentSection() {
     if (!currentSettings.preserveComments) return null;
     
+    const cached = this._getCachedContent('commentSection');
+    if (cached !== null) return cached;
+    
     for (const selector of getCommentSelectors()) {
-      const elements = document.querySelectorAll(selector);
-      if (elements.length > 0) {
-        return elements[0].parentElement.parentElement;
+      try {
+        const elements = document.querySelectorAll(selector);
+        if (elements.length > 0) {
+          const result = elements[0].parentElement?.parentElement || elements[0];
+          this._setCachedContent('commentSection', result);
+          return result;
+        }
+      } catch (e) {
+        console.warn(`Invalid comment selector: ${selector}`, e);
+        continue;
       }
     }
+
+    this._setCachedContent('commentSection', null);
     return null;
   },
 
@@ -367,18 +503,36 @@ const ContentDiscovery = {
     let bestElement = null;
     let maxValidTextLength = 0;
 
-    elements.forEach(element => {
-      if (ContentFilter.shouldExclude(element)) return;
-      if (!ContentFilter.hasValidContent(element)) return;
+    // Convert to array and sort by likely relevance (larger elements first)
+    const elementsArray = Array.from(elements).sort((a, b) => {
+      return (b.offsetHeight || 0) - (a.offsetHeight || 0);
+    });
+
+    for (const element of elementsArray) {
+      if (ContentFilter.shouldExclude(element)) continue;
+      
+      // Quick check for basic content validity before expensive calculations
+      if (element.textContent.trim().length < currentSettings.minContentLength) continue;
 
       const validTextLength = ContentFilter.getValidTextLength(element);
       if (validTextLength > maxValidTextLength) {
         maxValidTextLength = validTextLength;
         bestElement = element;
+        
+        // Early termination if we find a very large content block
+        if (validTextLength > 5000) {
+          break;
+        }
       }
-    });
+    }
 
     return bestElement;
+  },
+
+  // Clear cache when needed
+  clearCache() {
+    this._contentCache.clear();
+    this._lastCacheTime = 0;
   }
 };
 
@@ -399,9 +553,7 @@ const UI = {
   },
 
   prepareCleanContent(element) {
-    const clone = element.cloneNode(true);
-    ContentFilter.removeUnwantedElements(clone);
-    return clone;
+    return ContentFilter.prepareCleanContent(element);
   },
 
   replaceBodyContent(wrapper) {
@@ -509,40 +661,94 @@ const ReadingMode = {
   }
 };
 
+
 // ============================================================================
-// MESSAGE HANDLING
+// LAZY INITIALIZATION
+// ============================================================================
+
+let isInitialized = false;
+
+async function ensureInitialized() {
+  if (isInitialized) return;
+  
+  try {
+    await SettingsManager.loadSettings();
+    BackgroundGrayout.init();
+    isInitialized = true;
+    console.log('Reading Escape Mode extension initialized with settings:', currentSettings);
+  } catch (error) {
+    console.error('Failed to initialize Reading Escape Mode:', error);
+  }
+}
+
+// ============================================================================
+// OPTIMIZED MESSAGE HANDLING
 // ============================================================================
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // Initialize only when needed
   if (request.action === 'toggle-reading-mode') {
-    ReadingMode.cycle();
-    const currentMode = ReadingState.getCurrentMode();
-    sendResponse({
-      active: ReadingState.isActive(),
-      modeIndex: ReadingState.currentModeIndex,
-      modeName: currentMode?.name || 'Off',
-      modeWidth: currentMode?.width || null
+    ensureInitialized().then(() => {
+      ReadingMode.cycle();
+      const currentMode = ReadingState.getCurrentMode();
+      sendResponse({
+        active: ReadingState.isActive(),
+        modeIndex: ReadingState.currentModeIndex,
+        modeName: currentMode?.name || 'Off',
+        modeWidth: currentMode?.width || null
+      });
+    }).catch(error => {
+      console.error('Error toggling reading mode:', error);
+      sendResponse({ error: error.message });
     });
-  } else if (request.action === 'toggle-grayout-background') {
-    currentSettings.grayoutBackground = !currentSettings.grayoutBackground;
-    BackgroundGrayout.toggle(currentSettings.grayoutBackground);
-    
-    // Save the updated setting
-    chrome.storage.sync.set({ grayoutBackground: currentSettings.grayoutBackground });
-    
-    sendResponse({ 
-      enabled: currentSettings.grayoutBackground,
-      success: true 
+    return true; // Will respond asynchronously
+  } 
+  
+  else if (request.action === 'toggle-grayout-background') {
+    ensureInitialized().then(() => {
+      currentSettings.grayoutBackground = !currentSettings.grayoutBackground;
+      BackgroundGrayout.toggle(currentSettings.grayoutBackground);
+      
+      // Save the updated setting
+      chrome.storage.sync.set({ grayoutBackground: currentSettings.grayoutBackground });
+      
+      sendResponse({ 
+        enabled: currentSettings.grayoutBackground,
+        success: true 
+      });
+    }).catch(error => {
+      console.error('Error toggling grayout background:', error);
+      sendResponse({ error: error.message });
     });
-  } else if (request.action === 'settings-updated') {
-    SettingsManager.updateSettings(request.settings);
-    sendResponse({ success: true });
+    return true; // Will respond asynchronously
+  } 
+  
+  else if (request.action === 'settings-updated') {
+    ensureInitialized().then(() => {
+      // Clear caches when settings update
+      SelectorCache.invalidate();
+      ContentDiscovery.clearCache();
+      ContentFilter._textLengthCache = new WeakMap();
+      
+      SettingsManager.updateSettings(request.settings);
+      sendResponse({ success: true });
+    }).catch(error => {
+      console.error('Error updating settings:', error);
+      sendResponse({ error: error.message });
+    });
+    return true; // Will respond asynchronously
   }
 });
 
-// Initialize extension
+// Initialize extension lazily - only background grayout if enabled
 (async () => {
-  await SettingsManager.loadSettings();
-  BackgroundGrayout.init();
-  console.log('Reading Escape Mode extension loaded with settings:', currentSettings);
+  try {
+    // Quick initial load for background grayout only
+    const storedGrayoutSetting = await chrome.storage.sync.get(['grayoutBackground']);
+    if (storedGrayoutSetting.grayoutBackground !== false) { // Default to true
+      await ensureInitialized();
+    }
+  } catch (error) {
+    console.warn('Failed to initialize background grayout:', error);
+  }
 })();
