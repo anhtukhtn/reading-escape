@@ -406,11 +406,80 @@ const ContentFilter = {
     return this.getTextLengthFast(element);
   },
 
-  // Optimized content preparation with minimal cloning
+  // Optimized content preparation with minimal cloning and style preservation
   prepareCleanContent(element) {
     const clone = element.cloneNode(true);
+    
+    // Preserve important computed styles from the original element
+    this.preserveOriginalStyles(element, clone);
+    
+    // Remove unwanted elements after style preservation
     this.removeUnwantedElements(clone);
+    
     return clone;
+  },
+
+  // Preserve essential styles from original content
+  preserveOriginalStyles(original, clone) {
+    try {
+      // Get computed styles from the original element
+      const originalStyles = window.getComputedStyle(original);
+      
+      // Preserve font properties
+      const fontProperties = [
+        'font-family', 'font-size', 'font-weight', 'font-style',
+        'line-height', 'color', 'text-align'
+      ];
+      
+      fontProperties.forEach(prop => {
+        const value = originalStyles.getPropertyValue(prop);
+        if (value && value !== 'initial' && value !== 'inherit') {
+          clone.style.setProperty(prop, value);
+        }
+      });
+      
+      // Recursively preserve styles for child elements
+      const originalChildren = original.children;
+      const cloneChildren = clone.children;
+      
+      for (let i = 0; i < Math.min(originalChildren.length, cloneChildren.length); i++) {
+        this.preserveChildStyles(originalChildren[i], cloneChildren[i]);
+      }
+    } catch (error) {
+      console.warn('Could not preserve original styles:', error);
+    }
+  },
+
+  // Preserve styles for child elements (limited depth to avoid performance issues)
+  preserveChildStyles(originalChild, cloneChild, depth = 0) {
+    if (depth > 3) return; // Limit recursion depth for performance
+    
+    try {
+      const originalStyles = window.getComputedStyle(originalChild);
+      
+      // Preserve essential font and color properties
+      const essentialProperties = ['font-family', 'font-size', 'color', 'font-weight'];
+      
+      essentialProperties.forEach(prop => {
+        const value = originalStyles.getPropertyValue(prop);
+        if (value && value !== 'initial' && value !== 'inherit') {
+          cloneChild.style.setProperty(prop, value);
+        }
+      });
+      
+      // Continue for important child elements
+      const importantTags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'span', 'div'];
+      if (importantTags.includes(originalChild.tagName.toLowerCase())) {
+        const originalGrandChildren = originalChild.children;
+        const cloneGrandChildren = cloneChild.children;
+        
+        for (let i = 0; i < Math.min(originalGrandChildren.length, cloneGrandChildren.length); i++) {
+          this.preserveChildStyles(originalGrandChildren[i], cloneGrandChildren[i], depth + 1);
+        }
+      }
+    } catch (error) {
+      // Silently ignore errors for individual elements
+    }
   }
 };
 
