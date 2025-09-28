@@ -20,7 +20,7 @@ body.reading-escape-mode-active {
   left: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  background-color: #000 !important;
+  background-color: #444 !important;
   z-index: 999999 !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
@@ -35,7 +35,7 @@ body.reading-escape-mode-active {
 .reading-escape-content {
   width: var(--reading-escape-narrow-width) !important;
   max-width: var(--reading-escape-narrow-width) !important;
-  background-color: #ddd !important;
+  background-color: #aaa !important;
   color: #333333 !important;
   padding: 30px !important;
   border-radius: 8px !important;
@@ -49,18 +49,21 @@ body.reading-escape-mode-active {
 .reading-escape-content.reading-escape-wide {
   width: var(--reading-escape-wide-width) !important;
   max-width: var(--reading-escape-wide-width) !important;
+  background-color: #aaa !important;
 }
 
 /* Essential layout fixes only - preserve original styling */
 .reading-escape-content * {
   max-width: 100% !important;
   box-sizing: border-box !important;
+  background-color: #aaa !important;
 }
 
 /* Only fix layout issues, preserve original fonts and colors */
 .reading-escape-content img {
   max-width: 100% !important;
   height: auto !important;
+  background-color: #444 !important;
 }
 
 .reading-escape-content table {
